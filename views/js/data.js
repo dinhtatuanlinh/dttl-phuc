@@ -1,4 +1,4 @@
-var Dia_chi_Dich_vu = "https://phuc-dttl.herokuapp.com/"
+var Dia_chi_Dich_vu = "https://dttl-phuc.herokuapp.com/"
 var lh = 'http://localhost:1000/'
 
 // console.log(currentUrl);
@@ -29,7 +29,8 @@ function deletearecord(Tham_so, data) {
     if (Chuoi_JSON != "") Du_lieu = JSON.parse(Chuoi_JSON);
     return Du_lieu;
 }
-function getsession(){
+
+function getsession() {
     var Du_lieu = {};
     var Dia_chi_Xu_ly = `${Dia_chi_Dich_vu}getsession`
     var Xu_ly_HTTP = new XMLHttpRequest();
