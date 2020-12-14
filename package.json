@@ -1,0 +1,29 @@
+{
+  "name": "uploadfile",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dinhtatuanlinh/uploadfilenodejs.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dinhtatuanlinh/uploadfilenodejs/issues"
+  },
+  "homepage": "https://github.com/dinhtatuanlinh/uploadfilenodejs#readme",
+  "dependencies": {
+    "convert-excel-to-json": "^1.7.0",
+    "formidable": "^1.2.2",
+    "mongodb": "^3.6.3",
+    "nodemailer": "^6.4.16",
+    "query-string": "^6.13.7",
+    "querystring": "^0.2.0",
+    "twilio": "^3.53.0"
+  }
+}
