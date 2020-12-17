@@ -31,7 +31,317 @@ var Dich_vu = http.createServer(async function(req, res) {
     var url1 = req.url.replace('/', '');
     var order = querystring.parse(url1);
     var receivedString = "";
+    // edit paticipant info
+    if(order.req === "editpaticipant" && order.id !== undefined && order.id != null){
+        args = { _id: ObjectId(order.id) };
+        var form = new formidable.IncomingForm();
+        var paticipantinfo = await database.getlist(paticipantCollection, db, args)
+        var editdata = {};
+        editdata.buoi = [];
+        editdata.ngaybuoi = [];
+        editdata.startngaybuoi = [];
+        editdata.endngaybuoi = [];
+        editdata.companyId = paticipantinfo[0].companyId;
+        editdata.sessionId = paticipantinfo[0].sessionId;
+        editdata.companyname = paticipantinfo[0].companyname;
+        editdata.eventinfo = paticipantinfo[0].eventinfo;
+        // console.log(paticipantinfo);
+        var args1 = { _id: ObjectId(paticipantinfo[0].sessionId)};
+        var sessioninfo = await database.getlist(sessionCollection, db, args1);
+
+        form.parse(req, async function(err, fields, file) {
+            
+            editdata.paticipantName = fields.paticipantName;
+            editdata.paticipantPhone = fields.paticipantPhone;
+            editdata.paticipantEmail = fields.paticipantEmail;
+            var j = 8;
+            for(var i = 0; i < Object.keys(fields).length - 8; i++){// bắt đầu từ vị trí thứ 9 là buổi tham gia
+                editdata.buoi[i] = parseInt(fields[Object.keys(fields)[j]]);
+                j++;
+            }
+            
+            var result = paticipantinfo[0].buoi.concat(editdata.buoi);// gộp 2 mảng
+            var same = result.filter((item, index) => result.indexOf(item) !== index);// lấy ra các phần tử giống nhau trong 2 mảng
+            
+            var m = 0;
+            
+            result = editdata.buoi.concat(same);
+            var add = [];
+            
+            for(var i = 0; i < result.length; i++){
+                var temp = result[i];
+                if(result.filter((value) =>{return value === temp}).length === 1){
+                    add[m] = result.filter((value) =>{return value === temp})[0];
+                    m++;
+                }
+            }
+            result = paticipantinfo[0].buoi.concat(same);
+            var remove = [];
+            m = 0;
+            for(var i = 0; i < result.length; i++){
+                var temp = result[i];
+                if(result.filter((value) =>{return value === temp}).length === 1){
+                    remove[m] = result.filter((value) =>{return value === temp})[0];
+                    m++;
+                }
+            }
+            var sessiondata = {};
+            
+            sessiondata.ngaybuoi = sessioninfo[0].ngaybuoi;
+            sessiondata.startngaybuoi = sessioninfo[0].startngaybuoi;
+            sessiondata.endngaybuoi = sessioninfo[0].endngaybuoi;
+            sessiondata.numberbuoi = sessioninfo[0].numberbuoi;
+            sessiondata.companyId = sessioninfo[0].companyId;
+            sessiondata.session = sessioninfo[0].session;
+            sessiondata.paticipantnumber = [];
+            for(var i = 0; i < same.length; i++){
+                sessiondata.paticipantnumber[same[i]-1] = sessioninfo[0].paticipantnumber[same[i]-1];
+            }
+            for(var i = 0; i < add.length; i++){
+                if(sessioninfo[0].paticipantnumber[add[i]-1] + 1 > sessioninfo[0].numberbuoi[add[i]-1]){
+                    res.writeHead(301, { Location: `http://127.0.0.1:5500/views/memberform.html?paticipantinfo&${order.id}` });
+                    res.end();
+                    return;
+                }
+                sessiondata.paticipantnumber[add[i]-1] = sessioninfo[0].paticipantnumber[add[i]-1] + 1;
+            }
+
+            for(var i = 0; i < remove.length; i++){
+                sessiondata.paticipantnumber[remove[i]-1] = sessioninfo[0].paticipantnumber[remove[i]-1] - 1;
+            }
+            console.log(sessiondata.paticipantnumber[3]);
+            for(var i = 0; i < parseInt(sessioninfo[0].session); i++){
+                if(typeof sessiondata.paticipantnumber[i] === "undefined"){
+                    sessiondata.paticipantnumber[i] = null;
+                }
+            }
+            for(var i = 0; i < sessiondata.paticipantnumber.length; i++){
+                if(typeof sessiondata.paticipantnumber[i] === "undefined" || sessiondata.paticipantnumber[i] === null){
+                    sessiondata.paticipantnumber[i] = sessioninfo[0].paticipantnumber[i];
+                }
+            }
+            for(var i = 0; i < editdata.buoi.length; i++){
+                editdata.ngaybuoi[i] = sessioninfo[0].ngaybuoi[editdata.buoi[i] - 1];
+                editdata.startngaybuoi[i] = sessioninfo[0].startngaybuoi[editdata.buoi[i] - 1];
+                editdata.endngaybuoi[i] = sessioninfo[0].endngaybuoi[editdata.buoi[i] - 1];
+            }
+
+            var number = parseInt(fields.session);
+            // console.log(sessiondata);
+            // console.log(editdata);
+            await database.editARecord(paticipantCollection, db, editdata, args)
+            await database.editARecord(sessionCollection, db, sessiondata, args1)
+            // sendemail
+            var from = 'tuanlinh-aiamcorporation@gmail.com';
+            var to = editdata.paticipantEmail;
+            var subject = `Đăng ký tham gia sự kiện ${fields.eventinfo}`;
+            var buoi = ``;
+            j = 8;
+            for(var i = 0; i < number; i++){
+                buoi += `buổi ${parseInt(fields[Object.keys(fields)[j]])}: ngày ${sessioninfo[0].ngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}, từ ${sessioninfo[0].startngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h tới ${sessioninfo[0].endngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h`;
+                if(isNaN(parseInt(fields[Object.keys(fields)[j+1]]))){
+                    break;
+                    
+                }else{
+                    buoi += ` và `;
+                }
+                j++
+            }
+            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin http://127.0.0.1:5500/views/memberform.html?paticipantinfo&${order.id}`;
+            var emailresult = await email.sendemail(from, to, subject, emailcontent);
+
+        });
+        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.end();
+        return;
+    }
+        // add paticipant
+
+    if (req.url === '/addpaticipant' && req.method.toLowerCase() === 'post') {
+
+        //Khởi tạo form
+        var form = new formidable.IncomingForm();
+        // console.log(form);
+        //xử lý upload
+        form.parse(req, async function(err, fields, file) { // fields là các trường được gửi lên, file là file được gửi lên qua form
+            if (err) throw err;
+            // console.log(fields);
+            //path tmp trên server
+            var data = {};
+            var sessiondata = {};
+            // data.attend = [];
+            data.companyId = fields.companyId;
+            data.sessionId = fields.sessionId;
+            data.companyname = fields.companyname;
+            data.eventinfo = fields.eventinfo;
+            data.paticipantName = fields.paticipantName;
+            data.paticipantPhone = fields.paticipantPhone;
+            data.paticipantEmail = fields.paticipantEmail;
+            var args = {_id: ObjectId(fields.sessionId)};
+            var sessioninfo = await database.getlist(sessionCollection, db, args)
+            // console.log(sessioninfo);
+            sessiondata.ngaybuoi = sessioninfo[0].ngaybuoi;
+            sessiondata.startngaybuoi = sessioninfo[0].startngaybuoi;
+            sessiondata.endngaybuoi = sessioninfo[0].endngaybuoi;
+            sessiondata.numberbuoi = sessioninfo[0].numberbuoi;
+            sessiondata.companyId = sessioninfo[0].companyId;
+            sessiondata.session = sessioninfo[0].session;
+            sessiondata.paticipantnumber = sessioninfo[0].paticipantnumber;
+            var number = parseInt(fields.session);
+            
+            
+            data.buoi = [];
+            data.ngaybuoi = [];
+            data.startngaybuoi = [];
+            data.endngaybuoi = [];
+            // console.log(Object.keys(fields).length);
+            var j = 8;
+            // console.log(parseInt(fields[Object.keys(fields)[j]]));
+            for(var i = 0; i < Object.keys(fields).length - 8; i++){// bắt đầu từ vị trí thứ 9 là buổi tham gia
+                data.buoi[i] = parseInt(fields[Object.keys(fields)[j]]);
+                j++;
+            }
+            for(var i = 0; i < data.buoi.length; i++){
+                data.ngaybuoi[i] = sessioninfo[0].ngaybuoi[data.buoi[i] - 1];
+                data.startngaybuoi[i] = sessioninfo[0].startngaybuoi[data.buoi[i] - 1];
+                data.endngaybuoi[i] = sessioninfo[0].endngaybuoi[data.buoi[i] - 1];
+                sessiondata.paticipantnumber[data.buoi[i] - 1] = sessiondata.paticipantnumber[data.buoi[i] - 1] + 1;
+                if(sessiondata.paticipantnumber[data.buoi[i] - 1] > sessiondata.numberbuoi[data.buoi[i] - 1]){
+                    res.writeHead(301, { Location: `http://127.0.0.1:5500/views/memberform.html?companyinfo&${data.companyId}` });
+                    res.end();
+                    return;
+                }
+            }
+
+            await database.editARecord(sessionCollection, db, sessiondata, args);
+            var insertvalue = await database.insertdata(paticipantCollection, db, data);
+
+            // sendemail
+            var from = 'tuanlinh-aiamcorporation@gmail.com';
+            var to = data.paticipantEmail;
+            var subject = `Đăng ký tham gia sự kiện ${fields.eventinfo}`;
+            var buoi = ``;
+            j = 8;
+            for(var i = 0; i < number; i++){
+                buoi += `buổi ${parseInt(fields[Object.keys(fields)[j]])}: ngày ${sessioninfo[0].ngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}, từ ${sessioninfo[0].startngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h tới ${sessioninfo[0].endngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h`;
+                if(isNaN(parseInt(fields[Object.keys(fields)[j+1]]))){
+                    break;
+                    
+                }else{
+                    buoi += ` và `;
+                }
+                j++
+            }
+            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin http://127.0.0.1:5500/views/memberform.html?paticipantinfo&${insertvalue.insertedId}`;
+            var emailresult = await email.sendemail(from, to, subject, emailcontent);
+            // console.log(emailresult);
+            // sendsms
+            // var phonenumber = fields.paticipantPhone;
+            // var smscontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname} từ ngày ${fields.start} tới ngày ${fields.end}.`;
+            // var smsresult = await sms.sendsms(phonenumber, smscontent)
+            // console.log(smsresult);
+            // lấy số lượng người đã đăng ký
+            // args = { _id: ObjectId(fields.companyId) };
+            // var company = await database.getlist(companiesCollection, db, args);
+            // if (company[0].paticipant < company[0].number) {
+            //     await database.insertdata(paticipantCollection, db, data);
+            //     company[0].paticipant = company[0].paticipant + 1;
+            //     delete company[0]._id;
+            //     database.editARecord(companiesCollection, db, company[0], args);
+            // }
+
+        });
+        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.end();
+        return;
+        
+    }
+    // xóa 1 company record
+    if (order.req === 'deletecompany' && order.id !== undefined && order.id != null) {
+        // console.log('companylist');
+        args1 = { _id: ObjectId(order.id) };
+        args2 = { companyId: order.id };
+        var companylist = await database.getlist(companiesCollection, db, args);
+        // console.log(companylist);
+        var form = new formidable.IncomingForm();
+        //Thiết lập thư mục chứa file trên server
+        form.uploadDir = "uploads/";
+        var newpath = form.uploadDir + companylist[0].logoname;
+        fs.unlinkSync(newpath);
+        var sessioninfo = await database.getlist(sessionCollection, db, args2);
+        var sessionid = {_id: ObjectId(sessioninfo[0]._id)}
+        var result1 = await database.deleteARecord(companiesCollection, db, args1);
+        var result2 = await database.deleteARecord(sessionCollection, db, sessionid);
+        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.end();
+        return;
+
+    }
+    // edit một company
+    if (order.req === 'editcompany' && order.id !== undefined && order.id != null) {
+        args = { _id: ObjectId(order.id) };
+        var form = new formidable.IncomingForm();
+        //Thiết lập thư mục chứa file trên server
+        form.uploadDir = "uploads/";
+        //xử lý upload
+        form.parse(req, async function(err, fields, file) { // fields là các trường được gửi lên, file là file được gửi lên qua form
+            //path tmp trên server
+            var data = {};
+            var sessiondata = {};
+            sessiondata.ngaybuoi = [];
+            sessiondata.startngaybuoi = [];
+            sessiondata.endngaybuoi = [];
+            sessiondata.numberbuoi = [];
+            sessiondata.paticipantnumber = [];
+            data.companyinfo = fields.companyinfo;
+            data.companyname = fields.companyname;
+            data.eventinfo = fields.eventinfo;
+            data.session = fields.session;
+            var companyinfo = await database.getlist(companiesCollection, db, args);
+
+            if (file.logo.name) {
+                data.logoname = file.logo.name;
+                var path = file.logo.path;
+                //thiết lập path mới cho file
+                var newpath = form.uploadDir + file.logo.name;
+                fs.rename(path, newpath, function(err) {
+                    if (err) throw err;
+                    // res.end('Upload Thanh cong!');
+                });
+                var oldpath = form.uploadDir + companyinfo[0].logoname;
+                fs.unlinkSync(oldpath);
+            }else{
+                data.logoname = companyinfo[0].logoname;
+            }
+            
+            await database.editARecord(companiesCollection, db, data, args);
+            var sessionargs = { companyId: order.id};
+            var sessioninfo = await database.getlist(sessionCollection, db, sessionargs);
+            // console.log(sessioninfo);
+            var sessionid = {_id: ObjectId(sessioninfo[0]._id)}
+            var number = parseInt(data.session);
+            var j = 4;
+            sessiondata.companyId = order.id;
+            sessiondata.session = fields.session;
+            sessiondata.paticipantnumber = sessioninfo[0].paticipantnumber
+            for(var i = 0; i < number; i++){
+                sessiondata.ngaybuoi[i] = fields[Object.keys(fields)[j]];
+                sessiondata.startngaybuoi[i] = fields[Object.keys(fields)[j+1]];
+                sessiondata.endngaybuoi[i] = fields[Object.keys(fields)[j+2]];
+                sessiondata.numberbuoi[i] = fields[Object.keys(fields)[j+3]];
+                j = j + 4;
+            }
+            console.log(sessiondata);
+            await database.editARecord(sessionCollection, db, sessiondata, sessionid);
+            // res.writeHead(301, { Location: 'https://noteatext.com/portfolio/phuc/' });
+
+            res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+            res.end();
+        });
+        return;
+    }
     // file excel
+    // upload nguoi tham gia
     if (req.url === '/uploadpaticipantlist' && req.method.toLowerCase() === 'post') {
 
         var form = new formidable.IncomingForm();
@@ -77,58 +387,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         res.end();
         return;
     }
-    // add paticipant
 
-    if (req.url === '/addpaticipant' && req.method.toLowerCase() === 'post') {
-
-        //Khởi tạo form
-        var form = new formidable.IncomingForm();
-        // console.log(form);
-        //xử lý upload
-        form.parse(req, async function(err, fields, file) { // fields là các trường được gửi lên, file là file được gửi lên qua form
-            if (err) throw err;
-            // console.log('abc');
-            //path tmp trên server
-            var data = {};
-
-            data.companyId = fields.companyId;
-            data.companyname = fields.companyname;
-            data.eventinfo = fields.eventinfo;
-            data.start = fields.start;
-            data.end = fields.end;
-            data.session = fields.session;
-            data.number = fields.number;
-            data.paticipantName = fields.paticipantName;
-            data.paticipantPhone = fields.paticipantPhone;
-            data.paticipantEmail = fields.paticipantEmail;
-            // sendemail
-            var from = 'tuanlinh-aiamcorporation@gmail.com';
-            var to = 'dinhtatuanlinh@gmail.com';
-            var subject = `Đăng ký tham gia sự kiện ${fields.eventinfo}`;
-            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname} từ ngày ${fields.start} tới ngày ${fields.end}. Email này thay cho giấy mời.`;
-            var emailresult = await email.sendemail(from, to, subject, emailcontent);
-            console.log(emailresult);
-            // sendsms
-            var phonenumber = fields.paticipantPhone;
-            var smscontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname} từ ngày ${fields.start} tới ngày ${fields.end}.`;
-            var smsresult = await sms.sendsms(phonenumber, smscontent)
-            console.log(smsresult);
-            // lấy số lượng người đã đăng ký
-            args = { _id: ObjectId(fields.companyId) };
-            var company = await database.getlist(companiesCollection, db, args);
-            if (company[0].paticipant < company[0].number) {
-                await database.insertdata(paticipantCollection, db, data);
-                company[0].paticipant = company[0].paticipant + 1;
-                delete company[0]._id;
-                database.editARecord(companiesCollection, db, company[0], args);
-            }
-
-        });
-
-        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
-        res.end();
-        return;
-    }
     // add company
     if (req.url === '/addcompany' && req.method.toLowerCase() === 'post') {
         // console.log(req)
@@ -145,12 +404,12 @@ var Dich_vu = http.createServer(async function(req, res) {
             sessiondata.startngaybuoi = [];
             sessiondata.endngaybuoi = [];
             sessiondata.numberbuoi = [];
+            sessiondata.paticipantnumber = [];
             data.companyinfo = fields.companyinfo;
             data.companyname = fields.companyname;
             data.logoname = file.logo.name;
             data.eventinfo = fields.eventinfo;
             data.session = fields.session;
-            data.paticipant = 0
             if (file.logo.name) {
                 var path = file.logo.path;
                 //thiết lập path mới cho file
@@ -163,14 +422,15 @@ var Dich_vu = http.createServer(async function(req, res) {
             var dataresult = await database.insertdata(companiesCollection, db, data);
             var number = parseInt(data.session);
             var j = 4;
-            sessiondata.companyId = dataresult.insertedId
+            sessiondata.companyId = dataresult.insertedId.toString();
             sessiondata.session = fields.session;
             for(var i = 0; i < number; i++){
                 
                 sessiondata.ngaybuoi[i] = fields[Object.keys(fields)[j]];
                 sessiondata.startngaybuoi[i] = fields[Object.keys(fields)[j+1]];
                 sessiondata.endngaybuoi[i] = fields[Object.keys(fields)[j+2]];
-                sessiondata.numberbuoi[i] = fields[Object.keys(fields)[j+3]];
+                sessiondata.numberbuoi[i] = parseInt(fields[Object.keys(fields)[j+3]]);
+                sessiondata.paticipantnumber[i] = 0;
                 j = j + 4;
             }
             // console.log(sessiondata);
@@ -196,6 +456,15 @@ var Dich_vu = http.createServer(async function(req, res) {
         res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
         res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, content-type');
         res.setHeader('Access-Control-Allow-Credentials', true);
+        
+        // get paticipant info
+        if(order.req === "paticipantinfo" && order.id !== undefined && order.id != null){
+            var args = { _id: ObjectId(order.id) };
+            var paticipantinfo = await database.getlist(paticipantCollection, db, args);
+            paticipantinfo = JSON.stringify(paticipantinfo);
+            res.end(paticipantinfo);
+            return;
+        }
         // xóa người tham gia
         if (req.url === '/deletemember') {
             receivedString = JSON.parse(receivedString);
@@ -227,62 +496,8 @@ var Dich_vu = http.createServer(async function(req, res) {
             return;
         }
 
-        // xóa 1 company record
-        if (order.req === 'deletecompany' && order.id !== undefined && order.id != null) {
-            // console.log('companylist');
-            args1 = { _id: ObjectId(order.id) };
-            args2 = { companyId: ObjectId(order.id) };
-            var companylist = await database.getlist(companiesCollection, db, args);
-            // console.log(companylist);
-            var form = new formidable.IncomingForm();
-            //Thiết lập thư mục chứa file trên server
-            form.uploadDir = "uploads/";
-            var newpath = form.uploadDir + companylist[0].logoname;
-            fs.unlinkSync(newpath);
-            var result1 = await database.deleteARecord(companiesCollection, db, args1);
-            var result2 = await database.deleteARecord(sessionCollection, db, args2);
-            console.log(result2);
-            res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
-            res.end();
-            return;
-
-        }
-        // edit một record
-        if (order.req === 'editcompany' && order.id !== undefined && order.id != null) {
-            args = { _id: ObjectId(order.id) };
-            var form = new formidable.IncomingForm();
-            //Thiết lập thư mục chứa file trên server
-            form.uploadDir = "uploads/";
-            //xử lý upload
-            form.parse(req, function(err, fields, file) { // fields là các trường được gửi lên, file là file được gửi lên qua form
-                //path tmp trên server
-                var data = {};
-                data.companyinfo = fields.companyinfo;
-                data.companyname = fields.companyname;
-                data.logoname = file.logo.name;
-                data.eventinfo = fields.eventinfo;
-                data.start = fields.start;
-                data.end = fields.end;
-                data.session = fields.session;
-                data.number = field.number;
-                if (file.logo.name) {
-                    var path = file.logo.path;
-                    //thiết lập path mới cho file
-                    var newpath = form.uploadDir + file.logo.name;
-                    fs.rename(path, newpath, function(err) {
-                        if (err) throw err;
-                        // res.end('Upload Thanh cong!');
-                    });
-                }
-
-                database.editARecord(companiesCollection, db, data, args);
-                // res.writeHead(301, { Location: 'https://noteatext.com/portfolio/phuc/' });
-
-                res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
-                res.end();
-            });
-            return;
-        }
+        
+        
         // lấy thông tin để đưa vào form edit
         if (order.req === 'companyinfo' && order.id !== undefined && order.id != null) {
             args = { _id: ObjectId(order.id) }; // nếu là ObjectID phải thêm var ObjectId = require('mongodb').ObjectID;
@@ -293,6 +508,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         }
 
         if (req.url === '/getcompanylist') {
+            
             var companylist = await database.getlist(companiesCollection, db);
             // console.log(companylist);
             companylist = JSON.stringify(companylist);
@@ -300,12 +516,13 @@ var Dich_vu = http.createServer(async function(req, res) {
             return;
         }
         // get session
-        if (req.url === '/getsession') {
+        if (order.req === 'getsession' && order.id !== undefined && order.id != null) {
 
-            var companylist = await database.getlist(sessionCollection, db);
-            // console.log(companylist);
-            companylist = JSON.stringify(companylist);
-            res.end(companylist);
+            args = {companyId: order.id};
+            var sessiondata = await database.getlist(sessionCollection, db, args);
+            // console.log(sessiondata);
+            sessiondata = JSON.stringify(sessiondata);
+            res.end(sessiondata);
             return;
         }
 

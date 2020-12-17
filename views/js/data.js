@@ -1,4 +1,4 @@
-var Dia_chi_Dich_vu = "https://dttl-phuc.herokuapp.com/"
+// var lh = "https://dttl-phuc.herokuapp.com/";
 var lh = 'http://localhost:1000/'
 
 // console.log(currentUrl);
@@ -30,13 +30,15 @@ function deletearecord(Tham_so, data) {
     return Du_lieu;
 }
 
-function getsession() {
+function getsession(id) {
+    // console.log(id);
     var Du_lieu = {};
-    var Dia_chi_Xu_ly = `${Dia_chi_Dich_vu}getsession`
+    var Dia_chi_Xu_ly = `${lh}req=getsession&id=${id}`
     var Xu_ly_HTTP = new XMLHttpRequest();
     Xu_ly_HTTP.open("POST", Dia_chi_Xu_ly, false);
     Xu_ly_HTTP.send("");
     var Chuoi_JSON = Xu_ly_HTTP.responseText;
+    // console.log(Chuoi_JSON);
     // if (Chuoi_JSON = "xoa member thanh cong") { location.reload() }
     if (Chuoi_JSON != "") Du_lieu = JSON.parse(Chuoi_JSON);
     return Du_lieu;

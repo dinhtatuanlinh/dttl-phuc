@@ -125,7 +125,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <form id="form" role="form" action="http://localhost:1000/addcompany" method="post" enctype="multipart/form-data">
+                                    <form id="form" role="form" action="http://localhost:1000/addcompany" method="post" enctype="multipart/form-data" onsubmit="return validation()">
                                         <div class="form-group">
                                             <label>Thông tin công ty</label>
                                             <input id="companyinfo" class="form-control" name="companyinfo" value="">
@@ -136,7 +136,7 @@
                                         </div>
                                         <div class="form-group">
                                             <label>Logo công ty</label>
-                                            <input name="logo" value="" type="file">
+                                            <input id="logoinput" name="logo" value="" type="file">
                                             <img id="logo" src="" alt="">
                                         </div>
                                         <div class="form-group">
@@ -171,45 +171,101 @@
     <script src="js/custom.js"></script>
     <script src="js/data.js"></script>
     <script>
-        // var currentUrl = window.location.href;
-        // var url = new URL(currentUrl); //tách lấy phần request trong url
-        // var params = url.search;
-        // params = params.replace('?', '');
-        // var args = params.split("&");
-        // +++++++++++++++++++++++++++++++++++++++++
-        // Lấy giờ và ngày được chọn
-        // +++++++++++++++++++++++++++++++++++++++++++
-        var session = document.getElementById('session');
-        // +++++++++++++++++++++++++++++++++++++
-        // end lấy dữ liệu
-        // +++++++++++++++++++++++++++++++++++
-        // if (args[0]) {
-        //     var thong_tin_cong_ty = lay_thong_tin_cong_ty(args[0], args[1]);
-        //     // console.log(thong_tin_cong_ty);
-        //     var form = document.getElementById('form');
-        //     var companyinfo = document.getElementById('companyinfo');
-        //     var companyname = document.getElementById('companyname');
-        //     var logo = document.getElementById('logo');
-        //     var eventinfo = document.getElementById('eventinfo');
-        //     var start = document.getElementById('start');
-        //     var end = document.getElementById('end');
-        //     var number = document.getElementById('number');
-        //     if (args[0] == 'companyinfo') {
-        //         form.setAttribute("action", `http://localhost:1000/req=editcompany&id=${args[1]}`);
-        //         companyinfo.setAttribute("value", thong_tin_cong_ty[0].companyinfo);
-        //         companyname.setAttribute("value", thong_tin_cong_ty[0].companyname);
-        //         logo.setAttribute("src", `${lh}req=getlogo&name=${thong_tin_cong_ty[0].logoname}`);
-        //         logo.setAttribute("alt", thong_tin_cong_ty[0].companyname);
-        //         eventinfo.setAttribute("value", thong_tin_cong_ty[0].eventinfo);
-        //         start.setAttribute("value", thong_tin_cong_ty[0].start);
-        //         end.setAttribute("value", thong_tin_cong_ty[0].end);
-        //         session.setAttribute("value", thong_tin_cong_ty[0].session);
-        //         number.setAttribute("value", thong_tin_cong_ty[0].number)
-        //     }
-        // }
+        var companyinfo = document.getElementById('companyinfo');
+        var companyname = document.getElementById('companyname');
+        var logoinput = document.getElementById("logoinput");
+        var eventinfo = document.getElementById('eventinfo');
+        var session = document.getElementById("session");
+        var sessionselection = document.getElementById("sessionselection");
+
+        var currentUrl = window.location.href;
+        var url = new URL(currentUrl); //tách lấy phần request trong url
+        var params = url.search;
+        params = params.replace('?', '');
+        var args = params.split("&");
+
+        if (args[0]) {
+            var thong_tin_cong_ty = lay_thong_tin_cong_ty(args[0], args[1]);
+            console.log(thong_tin_cong_ty);
+            var sessiondata = getsession(args[1]);
+            // console.log(sessiondata);
+            if (args[0] == 'companyinfo') {
+                form.setAttribute("action", `http://localhost:1000/req=editcompany&id=${args[1]}`);
+                companyinfo.setAttribute("value", thong_tin_cong_ty[0].companyinfo);
+                companyname.setAttribute("value", thong_tin_cong_ty[0].companyname);
+                logo.setAttribute("src", `${lh}req=getlogo&name=${thong_tin_cong_ty[0].logoname}`);
+                logo.setAttribute("alt", thong_tin_cong_ty[0].companyname);
+                eventinfo.setAttribute("value", thong_tin_cong_ty[0].eventinfo);
+                session.setAttribute("value", thong_tin_cong_ty[0].session);
+                var html = ``;
+
+                for (var i = 1; i <= parseInt(sessiondata[0].session); i++) {
+                    var span = [];
+                    for(var j = 7; j <= 24; j++){
+                        if(j >= parseInt(sessiondata[0].startngaybuoi[i-1]) && j <= parseInt(sessiondata[0].endngaybuoi[i-1])){
+                            span[j] = `<span value="${i}&${j}" class="active disable ${j}">${j}h</span>`;
+                        }else{
+                            span[j] = `<span value="${i}&${j}" class="active hours ${j}">${j}h</span>`;
+                        }
+
+                    }
+                    // console.log(span);
+                    html += `
+                        <div id="sessionwrapper${i}">
+                            <label>Buổi ${i}:</label>
+                            <input id="${i}" class="buoi" type="date" name="ngaybuoi${i}" value="${sessiondata[0].ngaybuoi[i-1]}">
+                            <div>${span[7]}${span[8]}${span[9]}${span[10]}${span[11]}</div>
+                            <div>${span[12]}${span[13]}${span[14]}${span[15]}${span[16]}</div>
+                            <div>${span[17]}${span[18]}${span[19]}${span[20]}${span[21]}</div>
+                            <div>${span[22]}${span[23]}${span[24]}</div>
+                            <input name="startngaybuoi${i}" class="time" value="${sessiondata[0].startngaybuoi[i-1]}" type="hidden">
+                            <input name="endngaybuoi${i}" class="time" value="${sessiondata[0].endngaybuoi[i-1]}" type="hidden">
+                            <label>Số lượng người tham gia buổi ${i}</label>
+                            <input id="numberbuoi${i}" class="form-control" name="numberbuoi${i}" value="${sessiondata[0].numberbuoi[i-1]}">
+                        </div>
+                    `;
+                }
+
+                sessionselection.innerHTML = html;
+            }
+            var buoi = document.getElementsByClassName("buoi");
+            for (var i = 0; i < buoi.length; i++) {
+                // tạo tính ngăng chọn ngày
+                buoi[i].oninput = function(event) {
+                    var sessionNo = parseInt(event.target.id);
+                    var sessionwrapper = document.getElementById(`sessionwrapper${sessionNo}`);
+                    var time = sessionwrapper.getElementsByClassName("time");
+                    var active = sessionwrapper.getElementsByClassName('active');
+                    for(var j = 0; j < active.length; j ++){
+                        if(active[j].classList.contains("disable")){
+                            active[j].classList.remove("disable");
+                            active[j].classList.add("hours");
+                        }
+                    }
+                    for (var j = 0; j < active.length; j++) {
+                        
+                        active[j].onclick = (ev) => {
+                            
+                            ev.target.classList.toggle("hours");
+                            ev.target.classList.toggle("disable");
+
+                            var disable = sessionwrapper.getElementsByClassName("disable");
+
+                            time[0].setAttribute("value", disable[0].getAttribute("value").split("&")[1]);
+                            time[1].setAttribute("value", disable[disable.length - 1].getAttribute("value").split("&")[1]);
+                            for (var k = parseInt(time[0].getAttribute("value")); k <= parseInt(time[1].getAttribute("value")); k++) {
+                                // console.log('a')
+                                sessionwrapper.getElementsByClassName(`${k}`)[0].classList.remove("hours");
+                                sessionwrapper.getElementsByClassName(`${k}`)[0].classList.add("disable");
+                            }
+                        }
+                    }
+                }
+            }
+        }
         // var session = document.getElementById('session');
         // var sessionselection = document.getElementById('sessionselection');
-
+        
 
         function xu_ly_session(sessionvalue) {
             var html = ``;
@@ -225,10 +281,8 @@
                             <div><span value="${i}&22" class="active hours 22">22h</span><span value="${i}&23" class="active hours 23">23h</span><span value="${i}&24" class="active hours 24">24h</span></div>
                             <input name="startngaybuoi${i}" class="time" value="" type="hidden">
                             <input name="endngaybuoi${i}" class="time" value="" type="hidden">
-                            <div class="form-group">
-                                <label>Số lượng người tham gia buổi ${i}</label>
-                                <input id="numberbuoi${i}" class="form-control" name="numberbuoi${i}" value="">
-                            </div>
+                            <label>Số lượng người tham gia buổi ${i}</label>
+                            <input id="numberbuoi${i}" class="form-control" name="numberbuoi${i}" value="">
                         </div>
                     `;
                 }
@@ -254,16 +308,22 @@
                     var sessionNo = parseInt(event.target.id);
                     var sessionwrapper = document.getElementById(`sessionwrapper${sessionNo}`);
                     // var unenable = sessionwrapper.getElementsByClassName('unenable');
-                    var cancledisable = sessionwrapper.getElementsByClassName('disable');
+                    var active = sessionwrapper.getElementsByClassName('active');
 
                     var buoivalue = event.target.value;
                     // xóa class disable để refresh lại bảng giờ
-                    if (cancledisable.length !== 0) {
-                        do {
-                            cancledisable[0].classList.toggle('hours');
-                            cancledisable[0].classList.toggle('disable');
-                        } while (cancledisable.length > 0);
+                    for(var j = 0; j < active.length; j ++){
+                        if(active[j].classList.contains("disable")){
+                            active[j].classList.remove("disable");
+                            active[j].classList.add("hours");
+                        }
                     }
+                    // if (cancledisable.length !== 0) {
+                    //     do {
+                    //         cancledisable[0].classList.toggle('hours');
+                    //         cancledisable[0].classList.toggle('disable');
+                    //     } while (cancledisable.length > 0);
+                    // }
                     // end xóa class disable
 
                     // xóa value ở ô input giờ bắt đầu và giờ kết thúc
@@ -273,7 +333,6 @@
                     // end xóa value ô input
 
                     var hours = sessionwrapper.getElementsByClassName("hours");
-                    console.log(hours);
 
                     // tạo tính năng chọn giờ
                     for (var j = 0; j < hours.length; j++) {
@@ -297,6 +356,30 @@
                     }
                     // end tính năng hẹn giờ
 
+                }
+            }
+        }
+        function validation(){
+            console.log(session.value);
+            // alert(companyinfo);
+            // if (companyinfo === '' || companyname === '' || logoinput.files.length === 0 || eventinfo === '' || session === 0) {
+            if (companyinfo.value === '' || companyname.value === '' || eventinfo.value === '' || session.value === 0) {
+                alert('Nhập đầy đủ dữ liệu');
+                return false;
+                
+            }
+            if(logoinput.files.length === 0 && document.getElementById("logo").getAttribute("src") === ""){
+                alert('upload logo công ty');
+                return false;
+            }
+            for(var i = 1; i <= session.value; i++){
+                var wrapper = document.getElementById(`sessionwrapper${i}`);
+                // console.log(wrapper);
+                var time = wrapper.getElementsByClassName('time');
+                var numberbuoi = document.getElementById(`numberbuoi${i}`);
+                if (time[0].value === '' || time[1].value === '' || numberbuoi.value === ''){
+                    alert('Nhập đầy đủ dữ liệu');
+                    return false;
                 }
             }
         }
