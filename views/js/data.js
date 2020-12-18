@@ -1,5 +1,5 @@
-// var lh = "https://dttl-phuc.herokuapp.com/";
-var lh = 'http://localhost:1000/'
+var lh = "https://dttl-phuc.herokuapp.com/";
+// var lh = 'http://localhost:1000/'
 
 // console.log(currentUrl);
 

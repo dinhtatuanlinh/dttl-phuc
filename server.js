@@ -15,7 +15,7 @@ var ObjectId = require('mongodb').ObjectID;
 var MongoClient = mongodb.MongoClient;
 var url = 'mongodb+srv://dinhtatuanlinh:164342816@cluster0.ktgtg.mongodb.net/phuc?retryWrites=true&w=majority';
 var db;
-
+var clienturl = 'http://127.0.0.1:5500/views/';
 
 
 var Port = normalizePort(process.env.PORT || 1000);
@@ -31,13 +31,100 @@ var Dich_vu = http.createServer(async function(req, res) {
     var url1 = req.url.replace('/', '');
     var order = querystring.parse(url1);
     var receivedString = "";
+    // file excel
+    // upload nguoi tham gia
+    if (order.req === 'uploadpaticipantlist' && order.id !== undefined && order.id != null) {
+
+        var sessionargs = {companyId: order.id};
+
+        var sessioninfo = await database.getlist(sessionCollection, db, sessionargs);
+        var sessionId = {_id: ObjectId(sessioninfo[0]._id)};
+        var sessiondata = {};
+        sessiondata.ngaybuoi = sessioninfo[0].ngaybuoi;
+        sessiondata.startngaybuoi = sessioninfo[0].startngaybuoi;
+        sessiondata.endngaybuoi = sessioninfo[0].endngaybuoi;
+        sessiondata.numberbuoi = sessioninfo[0].numberbuoi;
+        sessiondata.companyId = sessioninfo[0].companyId;
+        sessiondata.session = sessioninfo[0].session;
+        sessiondata.paticipantnumber = sessioninfo[0].paticipantnumber;
+        var form = new formidable.IncomingForm();
+        form.uploadDir = "excels/";
+        form.parse(req, async function(err, fields, file) {
+
+            var path = file.paticipantlist.path;
+            var result = excelToJson({
+                source: fs.readFileSync(path),
+                // source: fs.readFileSync(form.uploadDir + file.paticipantlist.name),
+                columnToKey: {
+                    A: 'stt',
+                    B: 'companyId',
+                    C: 'companyname',
+                    D: 'eventinfo',
+                    E: 'paticipantName',
+                    F: 'paticipantPhone',
+                    G: 'paticipantEmail',
+                    H: 'attendsessions'
+                }
+            })
+            result = result.Sheet1;
+            result.shift();
+            result.forEach(async element => {
+                delete element.stt;
+                element.sessionId = sessioninfo[0]._id.toString();
+                element.attendsessions = element.attendsessions.split(",");
+                element.ngaybuoi = [];
+                element.startngaybuoi = [];
+                element.endngaybuoi = [];
+                for(var i = 0; i < element.attendsessions.length; i++){
+                    element.attendsessions[i] = parseInt(element.attendsessions[i]);
+                }
+                for(var i = 0; i < element.attendsessions.length; i++){
+                    element.ngaybuoi[i] = sessioninfo[0].ngaybuoi[element.attendsessions[i] - 1];
+                    element.startngaybuoi[i] = sessioninfo[0].startngaybuoi[element.attendsessions[i] - 1];
+                    element.endngaybuoi[i] = sessioninfo[0].endngaybuoi[element.attendsessions[i] - 1];
+                    sessiondata.paticipantnumber[element.attendsessions[i] - 1] = sessiondata.paticipantnumber[element.attendsessions[i] - 1] + 1;
+                }
+                var insertvalue = await database.insertdata(paticipantCollection, db, element);
+                // sendemail
+                var from = 'tuanlinh-aiamcorporation@gmail.com';
+                var to = element.paticipantEmail;
+                var subject = `Đăng ký tham gia sự kiện ${element.eventinfo}`;
+                var buoi = ``;
+                j = 8;
+                for(var i = 0; i < element.attendsessions.length; i++){
+                    buoi += `buổi ${element.attendsessions[i]}: ngày ${element.ngaybuoi[i]}, từ ${element.startngaybuoi[i]}h tới ${element.endngaybuoi[i]}h`;
+                    if(isNaN(element.attendsessions[i+1])){
+                        break;
+                        
+                    }else{
+                        buoi += ` và `;
+                    }
+                }
+                var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${element.eventinfo} của công ty ${element.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin ${clienturl}memberform.html?paticipantinfo&${insertvalue.insertedId}`;
+                var emailresult = await email.sendemail(from, to, subject, emailcontent);
+            })
+
+            await database.editARecord(sessionCollection, db, sessiondata, sessionId);
+            // var returnresult = await database.insertmany(paticipantCollection, db, data);
+            // console.log(returnresult);
+            // var f = files[Object.keys(files)[0]];
+            // var workbook = xlsx.readFile(f.path);
+            // var sheet_name_list = workbook.SheetNames;
+            // console.log('3');
+            // // workbook = JSON.stringify(workbook);
+            // console.log(workbook);
+        });
+        res.writeHead(301, { Location: `${clienturl}index.html` });
+        res.end();
+        return;
+    }
     // edit paticipant info
     if(order.req === "editpaticipant" && order.id !== undefined && order.id != null){
         args = { _id: ObjectId(order.id) };
         var form = new formidable.IncomingForm();
         var paticipantinfo = await database.getlist(paticipantCollection, db, args)
         var editdata = {};
-        editdata.buoi = [];
+        editdata.attendsessions = [];
         editdata.ngaybuoi = [];
         editdata.startngaybuoi = [];
         editdata.endngaybuoi = [];
@@ -56,16 +143,16 @@ var Dich_vu = http.createServer(async function(req, res) {
             editdata.paticipantEmail = fields.paticipantEmail;
             var j = 8;
             for(var i = 0; i < Object.keys(fields).length - 8; i++){// bắt đầu từ vị trí thứ 9 là buổi tham gia
-                editdata.buoi[i] = parseInt(fields[Object.keys(fields)[j]]);
+                editdata.attendsessions[i] = parseInt(fields[Object.keys(fields)[j]]);
                 j++;
             }
             
-            var result = paticipantinfo[0].buoi.concat(editdata.buoi);// gộp 2 mảng
+            var result = paticipantinfo[0].attendsessions.concat(editdata.attendsessions);// gộp 2 mảng
             var same = result.filter((item, index) => result.indexOf(item) !== index);// lấy ra các phần tử giống nhau trong 2 mảng
             
             var m = 0;
             
-            result = editdata.buoi.concat(same);
+            result = editdata.attendsessions.concat(same);
             var add = [];
             
             for(var i = 0; i < result.length; i++){
@@ -75,7 +162,7 @@ var Dich_vu = http.createServer(async function(req, res) {
                     m++;
                 }
             }
-            result = paticipantinfo[0].buoi.concat(same);
+            result = paticipantinfo[0].attendsessions.concat(same);
             var remove = [];
             m = 0;
             for(var i = 0; i < result.length; i++){
@@ -99,7 +186,7 @@ var Dich_vu = http.createServer(async function(req, res) {
             }
             for(var i = 0; i < add.length; i++){
                 if(sessioninfo[0].paticipantnumber[add[i]-1] + 1 > sessioninfo[0].numberbuoi[add[i]-1]){
-                    res.writeHead(301, { Location: `http://127.0.0.1:5500/views/memberform.html?paticipantinfo&${order.id}` });
+                    res.writeHead(301, { Location: `${clienturl}memberform.html?paticipantinfo&${order.id}` });
                     res.end();
                     return;
                 }
@@ -120,10 +207,10 @@ var Dich_vu = http.createServer(async function(req, res) {
                     sessiondata.paticipantnumber[i] = sessioninfo[0].paticipantnumber[i];
                 }
             }
-            for(var i = 0; i < editdata.buoi.length; i++){
-                editdata.ngaybuoi[i] = sessioninfo[0].ngaybuoi[editdata.buoi[i] - 1];
-                editdata.startngaybuoi[i] = sessioninfo[0].startngaybuoi[editdata.buoi[i] - 1];
-                editdata.endngaybuoi[i] = sessioninfo[0].endngaybuoi[editdata.buoi[i] - 1];
+            for(var i = 0; i < editdata.attendsessions.length; i++){
+                editdata.ngaybuoi[i] = sessioninfo[0].ngaybuoi[editdata.attendsessions[i] - 1];
+                editdata.startngaybuoi[i] = sessioninfo[0].startngaybuoi[editdata.attendsessions[i] - 1];
+                editdata.endngaybuoi[i] = sessioninfo[0].endngaybuoi[editdata.attendsessions[i] - 1];
             }
 
             var number = parseInt(fields.session);
@@ -147,11 +234,11 @@ var Dich_vu = http.createServer(async function(req, res) {
                 }
                 j++
             }
-            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin http://127.0.0.1:5500/views/memberform.html?paticipantinfo&${order.id}`;
+            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin ${clienturl}memberform.html?paticipantinfo&${order.id}`;
             var emailresult = await email.sendemail(from, to, subject, emailcontent);
 
         });
-        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.writeHead(301, { Location: `${clienturl}index.html` });
         res.end();
         return;
     }
@@ -190,7 +277,7 @@ var Dich_vu = http.createServer(async function(req, res) {
             var number = parseInt(fields.session);
             
             
-            data.buoi = [];
+            data.attendsessions = [];
             data.ngaybuoi = [];
             data.startngaybuoi = [];
             data.endngaybuoi = [];
@@ -198,16 +285,16 @@ var Dich_vu = http.createServer(async function(req, res) {
             var j = 8;
             // console.log(parseInt(fields[Object.keys(fields)[j]]));
             for(var i = 0; i < Object.keys(fields).length - 8; i++){// bắt đầu từ vị trí thứ 9 là buổi tham gia
-                data.buoi[i] = parseInt(fields[Object.keys(fields)[j]]);
+                data.attendsessions[i] = parseInt(fields[Object.keys(fields)[j]]);
                 j++;
             }
-            for(var i = 0; i < data.buoi.length; i++){
-                data.ngaybuoi[i] = sessioninfo[0].ngaybuoi[data.buoi[i] - 1];
-                data.startngaybuoi[i] = sessioninfo[0].startngaybuoi[data.buoi[i] - 1];
-                data.endngaybuoi[i] = sessioninfo[0].endngaybuoi[data.buoi[i] - 1];
-                sessiondata.paticipantnumber[data.buoi[i] - 1] = sessiondata.paticipantnumber[data.buoi[i] - 1] + 1;
-                if(sessiondata.paticipantnumber[data.buoi[i] - 1] > sessiondata.numberbuoi[data.buoi[i] - 1]){
-                    res.writeHead(301, { Location: `http://127.0.0.1:5500/views/memberform.html?companyinfo&${data.companyId}` });
+            for(var i = 0; i < data.attendsessions.length; i++){
+                data.ngaybuoi[i] = sessioninfo[0].ngaybuoi[data.attendsessions[i] - 1];
+                data.startngaybuoi[i] = sessioninfo[0].startngaybuoi[data.attendsessions[i] - 1];
+                data.endngaybuoi[i] = sessioninfo[0].endngaybuoi[data.attendsessions[i] - 1];
+                sessiondata.paticipantnumber[data.attendsessions[i] - 1] = sessiondata.paticipantnumber[data.attendsessions[i] - 1] + 1;
+                if(sessiondata.paticipantnumber[data.attendsessions[i] - 1] > sessiondata.numberbuoi[data.attendsessions[i] - 1]){
+                    res.writeHead(301, { Location: `${clienturl}memberform.html?companyinfo&${data.companyId}` });
                     res.end();
                     return;
                 }
@@ -232,7 +319,7 @@ var Dich_vu = http.createServer(async function(req, res) {
                 }
                 j++
             }
-            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin http://127.0.0.1:5500/views/memberform.html?paticipantinfo&${insertvalue.insertedId}`;
+            var emailcontent = `Bạn đã đăng ký thành công tham gia sự kiện ${fields.eventinfo} của công ty ${fields.companyname}, ${buoi}. Email này thay cho giấy mời. Truy cập vào link sau để sửa thông tin ${clienturl}memberform.html?paticipantinfo&${insertvalue.insertedId}`;
             var emailresult = await email.sendemail(from, to, subject, emailcontent);
             // console.log(emailresult);
             // sendsms
@@ -251,7 +338,7 @@ var Dich_vu = http.createServer(async function(req, res) {
             // }
 
         });
-        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.writeHead(301, { Location: `${clienturl}index.html` });
         res.end();
         return;
         
@@ -272,7 +359,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         var sessionid = {_id: ObjectId(sessioninfo[0]._id)}
         var result1 = await database.deleteARecord(companiesCollection, db, args1);
         var result2 = await database.deleteARecord(sessionCollection, db, sessionid);
-        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.writeHead(301, { Location: `${clienturl}index.html` });
         res.end();
         return;
 
@@ -335,58 +422,12 @@ var Dich_vu = http.createServer(async function(req, res) {
             await database.editARecord(sessionCollection, db, sessiondata, sessionid);
             // res.writeHead(301, { Location: 'https://noteatext.com/portfolio/phuc/' });
 
-            res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+            res.writeHead(301, { Location: `${clienturl}index.html` });
             res.end();
         });
         return;
     }
-    // file excel
-    // upload nguoi tham gia
-    if (req.url === '/uploadpaticipantlist' && req.method.toLowerCase() === 'post') {
-
-        var form = new formidable.IncomingForm();
-        form.uploadDir = "excels/";
-        form.parse(req, async function(err, fields, file) {
-
-            var path = file.paticipantlist.path;
-            var result = excelToJson({
-                source: fs.readFileSync(path),
-                // source: fs.readFileSync(form.uploadDir + file.paticipantlist.name),
-                columnToKey: {
-                    A: 'stt',
-                    B: 'companyId',
-                    C: 'companyname',
-                    D: 'eventinfo',
-                    E: 'start',
-                    F: 'end',
-                    G: 'session',
-                    H: 'number',
-                    I: 'paticipantName',
-                    J: 'paticipantPhone',
-                    K: 'paticipantEmail'
-                }
-            })
-            result = result.Sheet1;
-            result.shift();
-            var data = [];
-            result.forEach(element => {
-                delete element.stt;
-                data.push(element);
-            })
-            console.log(typeof data);
-            var returnresult = await database.insertmany(paticipantCollection, db, data);
-            console.log(returnresult);
-            // var f = files[Object.keys(files)[0]];
-            // var workbook = xlsx.readFile(f.path);
-            // var sheet_name_list = workbook.SheetNames;
-            // console.log('3');
-            // // workbook = JSON.stringify(workbook);
-            // console.log(workbook);
-        });
-        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
-        res.end();
-        return;
-    }
+    
 
     // add company
     if (req.url === '/addcompany' && req.method.toLowerCase() === 'post') {
@@ -440,7 +481,7 @@ var Dich_vu = http.createServer(async function(req, res) {
             // res.writeHead(301, { Location: 'https://noteatext.com/portfolio/phuc/' });
 
         });
-        res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
+        res.writeHead(301, { Location: `${clienturl}index.html` });
         res.end();
         return;
     }
@@ -480,8 +521,8 @@ var Dich_vu = http.createServer(async function(req, res) {
             var paticipantlist = await database.getlist(paticipantCollection, db, args2);
             paticipantlist = JSON.stringify(paticipantlist);
             // console.log(paticipantlist);
-            // res.writeHead(301, { Location: 'http://127.0.0.1:5500/views/index.html' });
-            // res.writeHead(302, { Location: `http://127.0.0.1:5500/views/paticipantlist.html?paticipantlist&${order.companyid}` });
+            // res.writeHead(301, { Location: '${clienturl}index.html' });
+            // res.writeHead(302, { Location: `${clienturl}paticipantlist.html?paticipantlist&${order.companyid}` });
             res.end(paticipantlist);
             return;
         }

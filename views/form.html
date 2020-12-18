@@ -89,7 +89,7 @@
                 <div class="sidebar-collapse">
                     <ul class="nav" id="side-menu">
                         <li>
-                            <a href="http://127.0.0.1:5500/views/index.html">
+                            <a href="index.html">
                                 <i class="fa fa-dashboard fa-fw"></i> Danh sách công ty sự kiện
                             </a>
                         </li>
@@ -125,7 +125,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <form id="form" role="form" action="http://localhost:1000/addcompany" method="post" enctype="multipart/form-data" onsubmit="return validation()">
+                                    <form id="form" role="form" action="https://dttl-phuc.herokuapp.com/addcompany" method="post" enctype="multipart/form-data" onsubmit="return validation()">
                                         <div class="form-group">
                                             <label>Thông tin công ty</label>
                                             <input id="companyinfo" class="form-control" name="companyinfo" value="">
@@ -190,7 +190,7 @@
             var sessiondata = getsession(args[1]);
             // console.log(sessiondata);
             if (args[0] == 'companyinfo') {
-                form.setAttribute("action", `http://localhost:1000/req=editcompany&id=${args[1]}`);
+                form.setAttribute("action", `${lh}req=editcompany&id=${args[1]}`);
                 companyinfo.setAttribute("value", thong_tin_cong_ty[0].companyinfo);
                 companyname.setAttribute("value", thong_tin_cong_ty[0].companyname);
                 logo.setAttribute("src", `${lh}req=getlogo&name=${thong_tin_cong_ty[0].logoname}`);
