@@ -186,7 +186,7 @@
             paticipantEmail.setAttribute("value", paticipantinfo[0].paticipantEmail);
             var j = 0;
             for(var i = 0; i < parseInt(thong_tin_cong_ty[0].session); i++){
-                if(i === paticipantinfo[0].buoi[j] - 1){
+                if(i === paticipantinfo[0].attendsessions[j] - 1){
                     html += `
                             <div class="form-group">
                                 <input type="checkbox" id="buoi${i+1}" name="buoi${i+1}" value="${i+1}" checked><span>&nbsp; Buổi ${i+1}: Vào ngày <strong>${sessiondata[0].ngaybuoi[i]}</strong>, từ <strong>${sessiondata[0].startngaybuoi[i]}h</strong> tới <strong>${sessiondata[0].endngaybuoi[i]}h</strong>, số người đã tham gia: <strong>${sessiondata[0].paticipantnumber[i]}</strong>/<strong>${sessiondata[0].numberbuoi[i]}</strong></span>
@@ -194,7 +194,7 @@
                         `;
                         j++;
                 }else{
-                    if(sessiondata[0].paticipantnumber[i] === sessiondata[0].numberbuoi[i]){
+                    if(sessiondata[0].paticipantnumber[i] === sessiondata[0].numberbuoi[i] || sessiondata[0].paticipantnumber[i] > sessiondata[0].numberbuoi[i]){
                         html += `
                             <div class="form-group">=
                                 <span>&nbsp; Buổi ${i+1}: Vào ngày <strong>${sessiondata[0].ngaybuoi[i]}</strong>, từ <strong>${sessiondata[0].startngaybuoi[i]}h</strong> tới <strong>${sessiondata[0].endngaybuoi[i]}h</strong>, số người đã tham gia: <strong>${sessiondata[0].paticipantnumber[i]}</strong>/<strong>${sessiondata[0].numberbuoi[i]}</strong> <strong class="enough">Đã đủ người tham gia</strong></span>
@@ -212,7 +212,7 @@
             }
         }else if (args[0] === 'companyinfo'){
             for(var i = 0; i < parseInt(thong_tin_cong_ty[0].session); i++){
-                if(sessiondata[0].paticipantnumber[i] === sessiondata[0].numberbuoi[i]){
+                if(sessiondata[0].paticipantnumber[i] === sessiondata[0].numberbuoi[i] || sessiondata[0].paticipantnumber[i] > sessiondata[0].numberbuoi[i]){
                     html += `
                     <div class="form-group">=
                         <span>&nbsp; Buổi ${i+1}: Vào ngày <strong>${sessiondata[0].ngaybuoi[i]}</strong>, từ <strong>${sessiondata[0].startngaybuoi[i]}h</strong> tới <strong>${sessiondata[0].endngaybuoi[i]}h</strong>, số người đã tham gia: <strong>${sessiondata[0].paticipantnumber[i]}</strong>/<strong>${sessiondata[0].numberbuoi[i]}</strong> <strong class="enough">Đã đủ người tham gia</strong></span>
