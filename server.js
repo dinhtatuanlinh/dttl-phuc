@@ -16,6 +16,7 @@ var MongoClient = mongodb.MongoClient;
 var url = 'mongodb+srv://dinhtatuanlinh:164342816@cluster0.ktgtg.mongodb.net/phuc?retryWrites=true&w=majority';
 var db;
 var clienturl = 'http://127.0.0.1:5500/views/';
+// var clienturl = 'https://noteatext.com/portfolio/phuc/';
 
 
 var Port = normalizePort(process.env.PORT || 1000);
@@ -35,10 +36,10 @@ var Dich_vu = http.createServer(async function(req, res) {
     // upload nguoi tham gia
     if (order.req === 'uploadpaticipantlist' && order.id !== undefined && order.id != null) {
 
-        var sessionargs = {companyId: order.id};
+        var sessionargs = { companyId: order.id };
 
         var sessioninfo = await database.getlist(sessionCollection, db, sessionargs);
-        var sessionId = {_id: ObjectId(sessioninfo[0]._id)};
+        var sessionId = { _id: ObjectId(sessioninfo[0]._id) };
         var sessiondata = {};
         sessiondata.ngaybuoi = sessioninfo[0].ngaybuoi;
         sessiondata.startngaybuoi = sessioninfo[0].startngaybuoi;
@@ -75,10 +76,10 @@ var Dich_vu = http.createServer(async function(req, res) {
                 element.ngaybuoi = [];
                 element.startngaybuoi = [];
                 element.endngaybuoi = [];
-                for(var i = 0; i < element.attendsessions.length; i++){
+                for (var i = 0; i < element.attendsessions.length; i++) {
                     element.attendsessions[i] = parseInt(element.attendsessions[i]);
                 }
-                for(var i = 0; i < element.attendsessions.length; i++){
+                for (var i = 0; i < element.attendsessions.length; i++) {
                     element.ngaybuoi[i] = sessioninfo[0].ngaybuoi[element.attendsessions[i] - 1];
                     element.startngaybuoi[i] = sessioninfo[0].startngaybuoi[element.attendsessions[i] - 1];
                     element.endngaybuoi[i] = sessioninfo[0].endngaybuoi[element.attendsessions[i] - 1];
@@ -91,12 +92,12 @@ var Dich_vu = http.createServer(async function(req, res) {
                 var subject = `Đăng ký tham gia sự kiện ${element.eventinfo}`;
                 var buoi = ``;
                 j = 8;
-                for(var i = 0; i < element.attendsessions.length; i++){
+                for (var i = 0; i < element.attendsessions.length; i++) {
                     buoi += `buổi ${element.attendsessions[i]}: ngày ${element.ngaybuoi[i]}, từ ${element.startngaybuoi[i]}h tới ${element.endngaybuoi[i]}h`;
-                    if(isNaN(element.attendsessions[i+1])){
+                    if (isNaN(element.attendsessions[i + 1])) {
                         break;
-                        
-                    }else{
+
+                    } else {
                         buoi += ` và `;
                     }
                 }
@@ -119,7 +120,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         return;
     }
     // edit paticipant info
-    if(order.req === "editpaticipant" && order.id !== undefined && order.id != null){
+    if (order.req === "editpaticipant" && order.id !== undefined && order.id != null) {
         args = { _id: ObjectId(order.id) };
         var form = new formidable.IncomingForm();
         var paticipantinfo = await database.getlist(paticipantCollection, db, args)
@@ -133,47 +134,47 @@ var Dich_vu = http.createServer(async function(req, res) {
         editdata.companyname = paticipantinfo[0].companyname;
         editdata.eventinfo = paticipantinfo[0].eventinfo;
         // console.log(paticipantinfo);
-        var args1 = { _id: ObjectId(paticipantinfo[0].sessionId)};
+        var args1 = { _id: ObjectId(paticipantinfo[0].sessionId) };
         var sessioninfo = await database.getlist(sessionCollection, db, args1);
 
         form.parse(req, async function(err, fields, file) {
-            
+
             editdata.paticipantName = fields.paticipantName;
             editdata.paticipantPhone = fields.paticipantPhone;
             editdata.paticipantEmail = fields.paticipantEmail;
             var j = 8;
-            for(var i = 0; i < Object.keys(fields).length - 8; i++){// bắt đầu từ vị trí thứ 9 là buổi tham gia
+            for (var i = 0; i < Object.keys(fields).length - 8; i++) { // bắt đầu từ vị trí thứ 9 là buổi tham gia
                 editdata.attendsessions[i] = parseInt(fields[Object.keys(fields)[j]]);
                 j++;
             }
-            
-            var result = paticipantinfo[0].attendsessions.concat(editdata.attendsessions);// gộp 2 mảng
-            var same = result.filter((item, index) => result.indexOf(item) !== index);// lấy ra các phần tử giống nhau trong 2 mảng
-            
+
+            var result = paticipantinfo[0].attendsessions.concat(editdata.attendsessions); // gộp 2 mảng
+            var same = result.filter((item, index) => result.indexOf(item) !== index); // lấy ra các phần tử giống nhau trong 2 mảng
+
             var m = 0;
-            
+
             result = editdata.attendsessions.concat(same);
             var add = [];
-            
-            for(var i = 0; i < result.length; i++){
+
+            for (var i = 0; i < result.length; i++) {
                 var temp = result[i];
-                if(result.filter((value) =>{return value === temp}).length === 1){
-                    add[m] = result.filter((value) =>{return value === temp})[0];
+                if (result.filter((value) => { return value === temp }).length === 1) {
+                    add[m] = result.filter((value) => { return value === temp })[0];
                     m++;
                 }
             }
             result = paticipantinfo[0].attendsessions.concat(same);
             var remove = [];
             m = 0;
-            for(var i = 0; i < result.length; i++){
+            for (var i = 0; i < result.length; i++) {
                 var temp = result[i];
-                if(result.filter((value) =>{return value === temp}).length === 1){
-                    remove[m] = result.filter((value) =>{return value === temp})[0];
+                if (result.filter((value) => { return value === temp }).length === 1) {
+                    remove[m] = result.filter((value) => { return value === temp })[0];
                     m++;
                 }
             }
             var sessiondata = {};
-            
+
             sessiondata.ngaybuoi = sessioninfo[0].ngaybuoi;
             sessiondata.startngaybuoi = sessioninfo[0].startngaybuoi;
             sessiondata.endngaybuoi = sessioninfo[0].endngaybuoi;
@@ -181,33 +182,33 @@ var Dich_vu = http.createServer(async function(req, res) {
             sessiondata.companyId = sessioninfo[0].companyId;
             sessiondata.session = sessioninfo[0].session;
             sessiondata.paticipantnumber = [];
-            for(var i = 0; i < same.length; i++){
-                sessiondata.paticipantnumber[same[i]-1] = sessioninfo[0].paticipantnumber[same[i]-1];
+            for (var i = 0; i < same.length; i++) {
+                sessiondata.paticipantnumber[same[i] - 1] = sessioninfo[0].paticipantnumber[same[i] - 1];
             }
-            for(var i = 0; i < add.length; i++){
-                if(sessioninfo[0].paticipantnumber[add[i]-1] + 1 > sessioninfo[0].numberbuoi[add[i]-1]){
+            for (var i = 0; i < add.length; i++) {
+                if (sessioninfo[0].paticipantnumber[add[i] - 1] + 1 > sessioninfo[0].numberbuoi[add[i] - 1]) {
                     res.writeHead(301, { Location: `${clienturl}memberform.html?paticipantinfo&${order.id}` });
                     res.end();
                     return;
                 }
-                sessiondata.paticipantnumber[add[i]-1] = sessioninfo[0].paticipantnumber[add[i]-1] + 1;
+                sessiondata.paticipantnumber[add[i] - 1] = sessioninfo[0].paticipantnumber[add[i] - 1] + 1;
             }
 
-            for(var i = 0; i < remove.length; i++){
-                sessiondata.paticipantnumber[remove[i]-1] = sessioninfo[0].paticipantnumber[remove[i]-1] - 1;
+            for (var i = 0; i < remove.length; i++) {
+                sessiondata.paticipantnumber[remove[i] - 1] = sessioninfo[0].paticipantnumber[remove[i] - 1] - 1;
             }
             console.log(sessiondata.paticipantnumber[3]);
-            for(var i = 0; i < parseInt(sessioninfo[0].session); i++){
-                if(typeof sessiondata.paticipantnumber[i] === "undefined"){
+            for (var i = 0; i < parseInt(sessioninfo[0].session); i++) {
+                if (typeof sessiondata.paticipantnumber[i] === "undefined") {
                     sessiondata.paticipantnumber[i] = null;
                 }
             }
-            for(var i = 0; i < sessiondata.paticipantnumber.length; i++){
-                if(typeof sessiondata.paticipantnumber[i] === "undefined" || sessiondata.paticipantnumber[i] === null){
+            for (var i = 0; i < sessiondata.paticipantnumber.length; i++) {
+                if (typeof sessiondata.paticipantnumber[i] === "undefined" || sessiondata.paticipantnumber[i] === null) {
                     sessiondata.paticipantnumber[i] = sessioninfo[0].paticipantnumber[i];
                 }
             }
-            for(var i = 0; i < editdata.attendsessions.length; i++){
+            for (var i = 0; i < editdata.attendsessions.length; i++) {
                 editdata.ngaybuoi[i] = sessioninfo[0].ngaybuoi[editdata.attendsessions[i] - 1];
                 editdata.startngaybuoi[i] = sessioninfo[0].startngaybuoi[editdata.attendsessions[i] - 1];
                 editdata.endngaybuoi[i] = sessioninfo[0].endngaybuoi[editdata.attendsessions[i] - 1];
@@ -218,18 +219,18 @@ var Dich_vu = http.createServer(async function(req, res) {
             // console.log(editdata);
             await database.editARecord(paticipantCollection, db, editdata, args)
             await database.editARecord(sessionCollection, db, sessiondata, args1)
-            // sendemail
+                // sendemail
             var from = 'tuanlinh-aiamcorporation@gmail.com';
             var to = editdata.paticipantEmail;
             var subject = `Đăng ký tham gia sự kiện ${fields.eventinfo}`;
             var buoi = ``;
             j = 8;
-            for(var i = 0; i < number; i++){
+            for (var i = 0; i < number; i++) {
                 buoi += `buổi ${parseInt(fields[Object.keys(fields)[j]])}: ngày ${sessioninfo[0].ngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}, từ ${sessioninfo[0].startngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h tới ${sessioninfo[0].endngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h`;
-                if(isNaN(parseInt(fields[Object.keys(fields)[j+1]]))){
+                if (isNaN(parseInt(fields[Object.keys(fields)[j + 1]]))) {
                     break;
-                    
-                }else{
+
+                } else {
                     buoi += ` và `;
                 }
                 j++
@@ -242,7 +243,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         res.end();
         return;
     }
-        // add paticipant
+    // add paticipant
 
     if (req.url === '/addpaticipant' && req.method.toLowerCase() === 'post') {
 
@@ -264,9 +265,9 @@ var Dich_vu = http.createServer(async function(req, res) {
             data.paticipantName = fields.paticipantName;
             data.paticipantPhone = fields.paticipantPhone;
             data.paticipantEmail = fields.paticipantEmail;
-            var args = {_id: ObjectId(fields.sessionId)};
+            var args = { _id: ObjectId(fields.sessionId) };
             var sessioninfo = await database.getlist(sessionCollection, db, args)
-            // console.log(sessioninfo);
+                // console.log(sessioninfo);
             sessiondata.ngaybuoi = sessioninfo[0].ngaybuoi;
             sessiondata.startngaybuoi = sessioninfo[0].startngaybuoi;
             sessiondata.endngaybuoi = sessioninfo[0].endngaybuoi;
@@ -275,8 +276,8 @@ var Dich_vu = http.createServer(async function(req, res) {
             sessiondata.session = sessioninfo[0].session;
             sessiondata.paticipantnumber = sessioninfo[0].paticipantnumber;
             var number = parseInt(fields.session);
-            
-            
+
+
             data.attendsessions = [];
             data.ngaybuoi = [];
             data.startngaybuoi = [];
@@ -284,16 +285,16 @@ var Dich_vu = http.createServer(async function(req, res) {
             // console.log(Object.keys(fields).length);
             var j = 8;
             // console.log(parseInt(fields[Object.keys(fields)[j]]));
-            for(var i = 0; i < Object.keys(fields).length - 8; i++){// bắt đầu từ vị trí thứ 9 là buổi tham gia
+            for (var i = 0; i < Object.keys(fields).length - 8; i++) { // bắt đầu từ vị trí thứ 9 là buổi tham gia
                 data.attendsessions[i] = parseInt(fields[Object.keys(fields)[j]]);
                 j++;
             }
-            for(var i = 0; i < data.attendsessions.length; i++){
+            for (var i = 0; i < data.attendsessions.length; i++) {
                 data.ngaybuoi[i] = sessioninfo[0].ngaybuoi[data.attendsessions[i] - 1];
                 data.startngaybuoi[i] = sessioninfo[0].startngaybuoi[data.attendsessions[i] - 1];
                 data.endngaybuoi[i] = sessioninfo[0].endngaybuoi[data.attendsessions[i] - 1];
                 sessiondata.paticipantnumber[data.attendsessions[i] - 1] = sessiondata.paticipantnumber[data.attendsessions[i] - 1] + 1;
-                if(sessiondata.paticipantnumber[data.attendsessions[i] - 1] > sessiondata.numberbuoi[data.attendsessions[i] - 1]){
+                if (sessiondata.paticipantnumber[data.attendsessions[i] - 1] > sessiondata.numberbuoi[data.attendsessions[i] - 1]) {
                     res.writeHead(301, { Location: `${clienturl}memberform.html?companyinfo&${data.companyId}` });
                     res.end();
                     return;
@@ -309,12 +310,12 @@ var Dich_vu = http.createServer(async function(req, res) {
             var subject = `Đăng ký tham gia sự kiện ${fields.eventinfo}`;
             var buoi = ``;
             j = 8;
-            for(var i = 0; i < number; i++){
+            for (var i = 0; i < number; i++) {
                 buoi += `buổi ${parseInt(fields[Object.keys(fields)[j]])}: ngày ${sessioninfo[0].ngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}, từ ${sessioninfo[0].startngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h tới ${sessioninfo[0].endngaybuoi[parseInt(fields[Object.keys(fields)[j]])-1]}h`;
-                if(isNaN(parseInt(fields[Object.keys(fields)[j+1]]))){
+                if (isNaN(parseInt(fields[Object.keys(fields)[j + 1]]))) {
                     break;
-                    
-                }else{
+
+                } else {
                     buoi += ` và `;
                 }
                 j++
@@ -341,7 +342,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         res.writeHead(301, { Location: `${clienturl}index.html` });
         res.end();
         return;
-        
+
     }
     // xóa 1 company record
     if (order.req === 'deletecompany' && order.id !== undefined && order.id != null) {
@@ -356,7 +357,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         var newpath = form.uploadDir + companylist[0].logoname;
         fs.unlinkSync(newpath);
         var sessioninfo = await database.getlist(sessionCollection, db, args2);
-        var sessionid = {_id: ObjectId(sessioninfo[0]._id)}
+        var sessionid = { _id: ObjectId(sessioninfo[0]._id) }
         var result1 = await database.deleteARecord(companiesCollection, db, args1);
         var result2 = await database.deleteARecord(sessionCollection, db, sessionid);
         res.writeHead(301, { Location: `${clienturl}index.html` });
@@ -397,25 +398,25 @@ var Dich_vu = http.createServer(async function(req, res) {
                 });
                 var oldpath = form.uploadDir + companyinfo[0].logoname;
                 fs.unlinkSync(oldpath);
-            }else{
+            } else {
                 data.logoname = companyinfo[0].logoname;
             }
-            
+
             await database.editARecord(companiesCollection, db, data, args);
-            var sessionargs = { companyId: order.id};
+            var sessionargs = { companyId: order.id };
             var sessioninfo = await database.getlist(sessionCollection, db, sessionargs);
             // console.log(sessioninfo);
-            var sessionid = {_id: ObjectId(sessioninfo[0]._id)}
+            var sessionid = { _id: ObjectId(sessioninfo[0]._id) }
             var number = parseInt(data.session);
             var j = 4;
             sessiondata.companyId = order.id;
             sessiondata.session = fields.session;
             sessiondata.paticipantnumber = sessioninfo[0].paticipantnumber
-            for(var i = 0; i < number; i++){
+            for (var i = 0; i < number; i++) {
                 sessiondata.ngaybuoi[i] = fields[Object.keys(fields)[j]];
-                sessiondata.startngaybuoi[i] = fields[Object.keys(fields)[j+1]];
-                sessiondata.endngaybuoi[i] = fields[Object.keys(fields)[j+2]];
-                sessiondata.numberbuoi[i] = fields[Object.keys(fields)[j+3]];
+                sessiondata.startngaybuoi[i] = fields[Object.keys(fields)[j + 1]];
+                sessiondata.endngaybuoi[i] = fields[Object.keys(fields)[j + 2]];
+                sessiondata.numberbuoi[i] = fields[Object.keys(fields)[j + 3]];
                 j = j + 4;
             }
             console.log(sessiondata);
@@ -427,7 +428,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         });
         return;
     }
-    
+
 
     // add company
     if (req.url === '/addcompany' && req.method.toLowerCase() === 'post') {
@@ -465,12 +466,12 @@ var Dich_vu = http.createServer(async function(req, res) {
             var j = 4;
             sessiondata.companyId = dataresult.insertedId.toString();
             sessiondata.session = fields.session;
-            for(var i = 0; i < number; i++){
-                
+            for (var i = 0; i < number; i++) {
+
                 sessiondata.ngaybuoi[i] = fields[Object.keys(fields)[j]];
-                sessiondata.startngaybuoi[i] = fields[Object.keys(fields)[j+1]];
-                sessiondata.endngaybuoi[i] = fields[Object.keys(fields)[j+2]];
-                sessiondata.numberbuoi[i] = parseInt(fields[Object.keys(fields)[j+3]]);
+                sessiondata.startngaybuoi[i] = fields[Object.keys(fields)[j + 1]];
+                sessiondata.endngaybuoi[i] = fields[Object.keys(fields)[j + 2]];
+                sessiondata.numberbuoi[i] = parseInt(fields[Object.keys(fields)[j + 3]]);
                 sessiondata.paticipantnumber[i] = 0;
                 j = j + 4;
             }
@@ -497,9 +498,9 @@ var Dich_vu = http.createServer(async function(req, res) {
         res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
         res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, content-type');
         res.setHeader('Access-Control-Allow-Credentials', true);
-        
+
         // get paticipant info
-        if(order.req === "paticipantinfo" && order.id !== undefined && order.id != null){
+        if (order.req === "paticipantinfo" && order.id !== undefined && order.id != null) {
             var args = { _id: ObjectId(order.id) };
             var paticipantinfo = await database.getlist(paticipantCollection, db, args);
             paticipantinfo = JSON.stringify(paticipantinfo);
@@ -510,15 +511,31 @@ var Dich_vu = http.createServer(async function(req, res) {
         if (req.url === '/deletemember') {
             receivedString = JSON.parse(receivedString);
 
-            var args0 = { _id: ObjectId(receivedString.paticipantid) };
-            var args1 = { _id: ObjectId(receivedString.companyid) };
-            var args2 = { companyId: receivedString.companyid }
-            var company = await database.getlist(companiesCollection, db, args1);
-            var result = await database.deleteARecord(paticipantCollection, db, args0);
-            company[0].paticipant = company[0].paticipant - 1;
-            delete company[0]._id;
-            database.editARecord(companiesCollection, db, company[0], args1);
-            var paticipantlist = await database.getlist(paticipantCollection, db, args2);
+            var paticipant_args = { _id: ObjectId(receivedString.paticipantid) };
+
+            var company_args = { companyId: receivedString.companyid };
+            var paticipant_info = await database.getlist(paticipantCollection, db, paticipant_args);
+            var session_info = await database.getlist(sessionCollection, db, company_args);
+            console.log(session_info[0]);
+            console.log(paticipant_info[0]);
+            var sessionid_args = { _id: ObjectId(session_info[0]._id) };
+            var session_data = {};
+            session_data.ngaybuoi = session_info[0].ngaybuoi;
+            session_data.startngaybuoi = session_info[0].startngaybuoi;
+            session_data.endngaybuoi = session_info[0].endngaybuoi;
+            session_data.numberbuoi = session_info[0].numberbuoi;
+            session_data.companyId = session_info[0].companyId;
+            session_data.session = session_info[0].session;
+            session_data.paticipantnumber = session_info[0].paticipantnumber;
+            for (var i = 0; i < paticipant_info[0].attendsessions.length; i++) {
+                session_data.paticipantnumber[paticipant_info[0].attendsessions[i] - 1] -= 1;
+            }
+            // var company = await database.getlist(companiesCollection, db, args1);
+
+            var result = await database.deleteARecord(paticipantCollection, db, paticipant_args);
+            // delete company[0]._id;
+            database.editARecord(sessionCollection, db, session_data, sessionid_args);
+            var paticipantlist = await database.getlist(paticipantCollection, db, company_args);
             paticipantlist = JSON.stringify(paticipantlist);
             // console.log(paticipantlist);
             // res.writeHead(301, { Location: '${clienturl}index.html' });
@@ -537,8 +554,8 @@ var Dich_vu = http.createServer(async function(req, res) {
             return;
         }
 
-        
-        
+
+
         // lấy thông tin để đưa vào form edit
         if (order.req === 'companyinfo' && order.id !== undefined && order.id != null) {
             args = { _id: ObjectId(order.id) }; // nếu là ObjectID phải thêm var ObjectId = require('mongodb').ObjectID;
@@ -549,7 +566,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         }
 
         if (req.url === '/getcompanylist') {
-            
+
             var companylist = await database.getlist(companiesCollection, db);
             // console.log(companylist);
             companylist = JSON.stringify(companylist);
@@ -559,7 +576,7 @@ var Dich_vu = http.createServer(async function(req, res) {
         // get session
         if (order.req === 'getsession' && order.id !== undefined && order.id != null) {
 
-            args = {companyId: order.id};
+            args = { companyId: order.id };
             var sessiondata = await database.getlist(sessionCollection, db, args);
             // console.log(sessiondata);
             sessiondata = JSON.stringify(sessiondata);

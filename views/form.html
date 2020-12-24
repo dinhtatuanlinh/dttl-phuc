@@ -177,6 +177,7 @@
         var eventinfo = document.getElementById('eventinfo');
         var session = document.getElementById("session");
         var sessionselection = document.getElementById("sessionselection");
+        var form = document.getElementById("form");
 
         var currentUrl = window.location.href;
         var url = new URL(currentUrl); //tách lấy phần request trong url
@@ -184,6 +185,7 @@
         params = params.replace('?', '');
         var args = params.split("&");
 
+        form.setAttribute("action", `${lh}addcompany`);
         if (args[0]) {
             var thong_tin_cong_ty = lay_thong_tin_cong_ty(args[0], args[1]);
             console.log(thong_tin_cong_ty);
@@ -201,10 +203,10 @@
 
                 for (var i = 1; i <= parseInt(sessiondata[0].session); i++) {
                     var span = [];
-                    for(var j = 7; j <= 24; j++){
-                        if(j >= parseInt(sessiondata[0].startngaybuoi[i-1]) && j <= parseInt(sessiondata[0].endngaybuoi[i-1])){
+                    for (var j = 7; j <= 24; j++) {
+                        if (j >= parseInt(sessiondata[0].startngaybuoi[i - 1]) && j <= parseInt(sessiondata[0].endngaybuoi[i - 1])) {
                             span[j] = `<span value="${i}&${j}" class="active disable ${j}">${j}h</span>`;
-                        }else{
+                        } else {
                             span[j] = `<span value="${i}&${j}" class="active hours ${j}">${j}h</span>`;
                         }
 
@@ -236,16 +238,16 @@
                     var sessionwrapper = document.getElementById(`sessionwrapper${sessionNo}`);
                     var time = sessionwrapper.getElementsByClassName("time");
                     var active = sessionwrapper.getElementsByClassName('active');
-                    for(var j = 0; j < active.length; j ++){
-                        if(active[j].classList.contains("disable")){
+                    for (var j = 0; j < active.length; j++) {
+                        if (active[j].classList.contains("disable")) {
                             active[j].classList.remove("disable");
                             active[j].classList.add("hours");
                         }
                     }
                     for (var j = 0; j < active.length; j++) {
-                        
+
                         active[j].onclick = (ev) => {
-                            
+
                             ev.target.classList.toggle("hours");
                             ev.target.classList.toggle("disable");
 
@@ -265,7 +267,7 @@
         }
         // var session = document.getElementById('session');
         // var sessionselection = document.getElementById('sessionselection');
-        
+
 
         function xu_ly_session(sessionvalue) {
             var html = ``;
@@ -312,8 +314,8 @@
 
                     var buoivalue = event.target.value;
                     // xóa class disable để refresh lại bảng giờ
-                    for(var j = 0; j < active.length; j ++){
-                        if(active[j].classList.contains("disable")){
+                    for (var j = 0; j < active.length; j++) {
+                        if (active[j].classList.contains("disable")) {
                             active[j].classList.remove("disable");
                             active[j].classList.add("hours");
                         }
@@ -359,25 +361,26 @@
                 }
             }
         }
-        function validation(){
+
+        function validation() {
             console.log(session.value);
             // alert(companyinfo);
             // if (companyinfo === '' || companyname === '' || logoinput.files.length === 0 || eventinfo === '' || session === 0) {
             if (companyinfo.value === '' || companyname.value === '' || eventinfo.value === '' || session.value === 0) {
                 alert('Nhập đầy đủ dữ liệu');
                 return false;
-                
+
             }
-            if(logoinput.files.length === 0 && document.getElementById("logo").getAttribute("src") === ""){
+            if (logoinput.files.length === 0 && document.getElementById("logo").getAttribute("src") === "") {
                 alert('upload logo công ty');
                 return false;
             }
-            for(var i = 1; i <= session.value; i++){
+            for (var i = 1; i <= session.value; i++) {
                 var wrapper = document.getElementById(`sessionwrapper${i}`);
                 // console.log(wrapper);
                 var time = wrapper.getElementsByClassName('time');
                 var numberbuoi = document.getElementById(`numberbuoi${i}`);
-                if (time[0].value === '' || time[1].value === '' || numberbuoi.value === ''){
+                if (time[0].value === '' || time[1].value === '' || numberbuoi.value === '') {
                     alert('Nhập đầy đủ dữ liệu');
                     return false;
                 }
